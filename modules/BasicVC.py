@@ -25,6 +25,9 @@ class BasicVC(commands.Cog):
     
     @commands.command(name='leave', brief='Leave a vc', description="Leave a vc")
     async def leave(self, context):
+        controls = self.bot.get_cog('MusicControl')
+        await controls.stop(context)
+
         await context.voice_client.disconnect()
 
 def setup(bot):

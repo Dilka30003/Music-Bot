@@ -128,16 +128,16 @@ class MusicControl(commands.Cog):
                 self.task.start(context)
 
     @commands.command(name='stop', aliases=['clear'])
-    async def stop(self, context, command = None):
+    async def stop(self, context):
         self.queue = []
         context.voice_client.stop()
     
     @commands.command(name='skip', aliases=['n', 's'])
-    async def stop(self, context, command = None):
+    async def skip(self, context):
         context.voice_client.stop()
 
     @commands.command(name='shuffle')
-    async def shuffle(self, context, command = None):
+    async def shuffle(self, context):
         random.shuffle(self.queue)
     
     @tasks.loop(seconds=0.5)
