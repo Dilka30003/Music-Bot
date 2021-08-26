@@ -7,10 +7,14 @@ from discord.ext import tasks
 from io import BytesIO
 import os
 from pathlib import Path
+import yaml
+import threading
 
 import youtube_dl
 import asyncio
 from youtubesearchpython import VideosSearch
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -36,6 +40,14 @@ ffmpeg_options = {
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
+with open('config.yaml') as f:
+    localConfig = yaml.load(f, Loader=yaml.FullLoader)
+    client_id = localConfig['spotify_client']
+    client_secret = localConfig['spotify_secret']
+
+scope = "playlist-read-collaborative"
+sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id, client_secret= client_secret, redirect_uri='http://localhost/', scope=scope))
+
 
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=0.5):
@@ -59,7 +71,11 @@ class YTDLSource(discord.PCMVolumeTransformer):
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
 
 
-
+class Song():
+    def __init__(self, results):
+        self.url = results['link']
+        self.title = results['title']
+        self.duration = results['duration']
 
 class MusicControl(commands.Cog):
     """ValorantCog"""
@@ -69,34 +85,64 @@ class MusicControl(commands.Cog):
         self.task = self.queueHandler
         self.queue = []
 
-    @commands.command(name='play')
-    async def play(self, context, *, arg):
-        url = VideosSearch(arg, limit = 1).result()['result'][0]['link']
+    def loadTracks(self, tracks):
+        for rawSong in tracks:
+            name = rawSong['track']['name']
+            results = VideosSearch(name, limit = 1).result()['result'][0]
+            song = Song(results)
+            self.queue.append(song)
 
+    @commands.command(name='play', aliases=['p'])
+    async def play(self, context, *, arg):
 
         controls = self.bot.get_cog('BasicVC')
         await controls.join(context)
 
-        self.queue.append(url)
-        if not self.task.is_running():
-            self.task.start(context)
+        if 'open.spotify.com/playlist/' in arg:
+            playlist = sp.playlist(arg)
 
-    @commands.command(name='stop')
+            name = playlist['tracks']['items'][0]['track']['name']
+            results = VideosSearch(name, limit = 1).result()['result'][0]
+            song = Song(results)
+            self.queue.append(song)
+
+            threading.Thread(target=self.loadTracks, args=([playlist['tracks']['items'][1:]]), daemon=True).start()
+
+            if not self.task.is_running():
+                await self.task.start(context)
+            
+            playlistLength = len(playlist['tracks']['items'])
+            await context.send(f'Added {playlistLength} songs to queue')
+
+        else:
+            results = VideosSearch(arg, limit = 1).result()['result'][0]
+            song = Song(results)
+
+            await context.send(f'Added \'{song.title}\' to queue')
+
+            self.queue.append(song)
+
+
+            if not self.task.is_running():
+                self.task.start(context)
+
+    @commands.command(name='stop', aliases=['clear'])
     async def stop(self, context, command = None):
         self.queue = []
         context.voice_client.stop()
     
-    @commands.command(name='skip')
+    @commands.command(name='skip', aliases=['n', 's'])
     async def stop(self, context, command = None):
         context.voice_client.stop()
     
-    @tasks.loop(seconds=1)
+    @tasks.loop(seconds=0.5)
     async def queueHandler(self, context):
         if not context.voice_client.is_playing():
             if len(self.queue) < 1:
                 self.task.cancel()
             else:
-                url = self.queue.pop(0)
+                song = self.queue.pop(0)
+                url = song.url
                 async with context.typing():
                     player = await YTDLSource.from_url(url, loop=self.bot.loop, stream=True)
                     context.voice_client.play(player, after=lambda e: print(f'Player error: {e}') if e else None)
