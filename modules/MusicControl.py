@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import yaml
 import threading
+import random
 
 import youtube_dl
 import asyncio
@@ -134,6 +135,10 @@ class MusicControl(commands.Cog):
     @commands.command(name='skip', aliases=['n', 's'])
     async def stop(self, context, command = None):
         context.voice_client.stop()
+
+    @commands.command(name='shuffle')
+    async def shuffle(self, context, command = None):
+        random.shuffle(self.queue)
     
     @tasks.loop(seconds=0.5)
     async def queueHandler(self, context):
