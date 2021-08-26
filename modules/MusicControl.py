@@ -1,13 +1,16 @@
+from asyncio.queues import Queue
 from discord import message
 import discord
 from discord import Embed
 from discord.ext import commands
+from discord.ext import tasks
 from io import BytesIO
 import os
 from pathlib import Path
 
 import youtube_dl
 import asyncio
+from youtubesearchpython import VideosSearch
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -63,29 +66,41 @@ class MusicControl(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.task = self.queueHandler
+        self.queue = []
 
-    @commands.command(name='play', brief='Play a song', description="Play a song")
-    async def play(self, context, command = None):
+    @commands.command(name='play')
+    async def play(self, context, *, arg):
+        url = VideosSearch(arg, limit = 1).result()['result'][0]['link']
+
+
         controls = self.bot.get_cog('BasicVC')
         await controls.join(context)
 
-        url = 'https://www.youtube.com/watch?v=Kp4ZWjA09q0'
+        self.queue.append(url)
+        if not self.task.is_running():
+            self.task.start(context)
 
-        async with context.typing():
-            player = await YTDLSource.from_url(url, loop=self.bot.loop)
-            context.voice_client.play(player, after=lambda e: print(f'Player error: {e}') if e else None)
-
-        print(f'Now playing: {player.title}')
+    @commands.command(name='stop')
+    async def stop(self, context, command = None):
+        self.queue = []
+        context.voice_client.stop()
     
-    @commands.command()
-    async def yt(self, ctx, *, url):
-        """Plays from a url (almost anything youtube_dl supports)"""
-
-        async with ctx.typing():
-            player = await YTDLSource.from_url(url, loop=self.bot.loop)
-            ctx.voice_client.play(player, after=lambda e: print(f'Player error: {e}') if e else None)
-
-        await ctx.send(f'Now playing: {player.title}')
+    @commands.command(name='skip')
+    async def stop(self, context, command = None):
+        context.voice_client.stop()
+    
+    @tasks.loop(seconds=1)
+    async def queueHandler(self, context):
+        if not context.voice_client.is_playing():
+            if len(self.queue) < 1:
+                self.task.cancel()
+            else:
+                url = self.queue.pop(0)
+                async with context.typing():
+                    player = await YTDLSource.from_url(url, loop=self.bot.loop, stream=True)
+                    context.voice_client.play(player, after=lambda e: print(f'Player error: {e}') if e else None)
+                await context.send(f'Now playing: {player.title}')
 
 def setup(bot):
     bot.add_cog(MusicControl(bot))

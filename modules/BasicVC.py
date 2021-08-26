@@ -16,7 +16,7 @@ class BasicVC(commands.Cog):
     @commands.command(name='join', brief='Join a vc', description="Join a vc")
     async def join(self, context):
         if len(self.bot.voice_clients) > 0:
-            await self.bot.voice_clients[0].move_to(context.message.author.voice.channel)
+            await context.voice_client.move_to(context.message.author.voice.channel)
             return
         if context.message.author.voice:
             self.voice_player = await context.message.author.voice.channel.connect()
@@ -25,7 +25,7 @@ class BasicVC(commands.Cog):
     
     @commands.command(name='leave', brief='Leave a vc', description="Leave a vc")
     async def leave(self, context):
-        await self.bot.voice_clients[0].disconnect()
+        await context.voice_client.disconnect()
 
 def setup(bot):
     bot.add_cog(BasicVC(bot))
