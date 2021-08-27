@@ -10,7 +10,8 @@ from io import BytesIO
 import discord
 from discord import Embed
 from discord.ext import commands
-from discord_components import DiscordComponents, Button, ButtonStyle, InteractionType
+from discord_components import DiscordComponents, Button, ButtonStyle
+from discord_components.interaction import Interaction
 import time
 
 import asyncio
@@ -49,7 +50,7 @@ async def on_ready():
     print(bot.user.id)
     print('------')
     logging.info('Successfully Logged In as ' + bot.user.name + '   ' + str(bot.user.id))
-    DiscordComponents(bot, change_discord_methods=True)
+    DiscordComponents(bot)
     with open('version') as f:
         await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f.read()))
     x = threading.Thread(target=background_task, daemon=True)

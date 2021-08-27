@@ -16,6 +16,7 @@ import asyncio
 from youtubesearchpython import VideosSearch
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+from discord_components import DiscordComponents, Button, ButtonStyle
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -85,13 +86,18 @@ class MusicControl(commands.Cog):
         self.bot = bot
         self.task = self.queueHandler
         self.queue = []
+        self.stopLoading = False
 
     def loadTracks(self, tracks):
         for rawSong in tracks:
             name = rawSong['track']['name']
             results = VideosSearch(name, limit = 1).result()['result'][0]
             song = Song(results)
+            if self.stopLoading:
+                self.stopLoading = False
+                break
             self.queue.append(song)
+            
 
     @commands.command(name='play', aliases=['p'])
     async def play(self, context, *, arg):
@@ -107,7 +113,7 @@ class MusicControl(commands.Cog):
             song = Song(results)
             self.queue.append(song)
 
-            threading.Thread(target=self.loadTracks, args=([playlist['tracks']['items'][1:]]), daemon=True).start()
+            self.loadThread = threading.Thread(target=self.loadTracks, args=([playlist['tracks']['items'][1:]]), daemon=True).start()
 
             if not self.task.is_running():
                 await self.task.start(context)
@@ -129,8 +135,9 @@ class MusicControl(commands.Cog):
 
     @commands.command(name='stop', aliases=['clear'])
     async def stop(self, context):
-        self.queue = []
+        self.stopLoading = True
         context.voice_client.stop()
+        self.queue = []
     
     @commands.command(name='skip', aliases=['n', 's'])
     async def skip(self, context):
@@ -140,7 +147,25 @@ class MusicControl(commands.Cog):
     async def shuffle(self, context):
         random.shuffle(self.queue)
     
-    @tasks.loop(seconds=0.5)
+    @commands.command(name='queue', aliases=['q'])
+    async def skip(self, context):
+        if len(self.queue) > 0:
+            index = 0
+            message = '```\n'
+            for i in range(10*index, min(len(self.queue), 10*(index+1))):
+                song:Song = self.queue[i]
+                lineNumber = (str(i+1)+'.').ljust(3)
+                line = f'{lineNumber} {song.title.ljust(80)} {song.duration}'
+                message += line + '\n'
+            message += '```'
+
+            btnPrev = Button(style=ButtonStyle.blue, label="Previous Page", custom_id="btnPrev")
+            btnNext = Button(style=ButtonStyle.blue, label="Next Page", custom_id="btnNext")
+
+            await context.send(content=message, components=[[btnPrev, btnNext]])
+
+    
+    @tasks.loop(seconds=1)
     async def queueHandler(self, context):
         if not context.voice_client.is_playing():
             if len(self.queue) < 1:
