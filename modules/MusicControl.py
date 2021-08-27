@@ -86,12 +86,15 @@ class MusicControl(commands.Cog):
         self.bot = bot
         self.task = self.queueHandler
         self.queue = []
+        self.queueIndex = 0
         self.stopLoading = False
+        self.checkButtons.start()
 
     def loadTracks(self, tracks):
         for rawSong in tracks:
             name = rawSong['track']['name']
-            results = VideosSearch(name, limit = 1).result()['result'][0]
+            artist = rawSong['track']['artists'][0]['name']
+            results = VideosSearch(name + ' ' + artist, limit = 1).result()['result'][0]
             song = Song(results)
             if self.stopLoading:
                 self.stopLoading = False
@@ -147,22 +150,65 @@ class MusicControl(commands.Cog):
     async def shuffle(self, context):
         random.shuffle(self.queue)
     
+    async def generateQueue(self):
+        index = self.queueIndex
+        message = '```\n'
+        for i in range(10*index, min(len(self.queue), 10*(index+1))):
+            song:Song = self.queue[i]
+            lineNumber = (str(i+1)+'.').ljust(3)
+            line = f'{lineNumber} {song.title.ljust(100)} {song.duration}'
+            message += line + '\n'
+        message += '```'
+        
+        maxIndex = len(self.queue)//10
+
+        buttons = []
+        if index > 0:
+            buttons.append(Button(style=ButtonStyle.blue, label="Previous Page", custom_id="btnPrev"))
+        if index < maxIndex:
+            buttons.append(Button(style=ButtonStyle.blue, label="Next Page", custom_id="btnNext"))
+        
+        return message, buttons
+
+        
+
+
     @commands.command(name='queue', aliases=['q'])
-    async def skip(self, context):
+    async def queue(self, context):
         if len(self.queue) > 0:
-            index = 0
-            message = '```\n'
-            for i in range(10*index, min(len(self.queue), 10*(index+1))):
-                song:Song = self.queue[i]
-                lineNumber = (str(i+1)+'.').ljust(3)
-                line = f'{lineNumber} {song.title.ljust(80)} {song.duration}'
-                message += line + '\n'
-            message += '```'
+            self.queueIndex = 0
+            message, buttons = await self.generateQueue()
 
-            btnPrev = Button(style=ButtonStyle.blue, label="Previous Page", custom_id="btnPrev")
-            btnNext = Button(style=ButtonStyle.blue, label="Next Page", custom_id="btnNext")
+            if len(buttons) > 0:
+                await context.send(content=message, components=[buttons])
+            else:
+                await context.send(content=message)
 
-            await context.send(content=message, components=[[btnPrev, btnNext]])
+            
+    
+    @tasks.loop(seconds=0.5)
+    async def checkButtons(self):
+        interaction = await self.bot.wait_for("button_click")
+        #await interaction.send(content="Button Clicked")
+        if interaction.component.id == 'btnNext':
+            self.queueIndex += 1
+            message, buttons = await self.generateQueue()
+
+            if len(buttons) > 0:
+                await interaction.edit_origin(content=message, components=[buttons])
+            else:
+                await interaction.edit_origin(content=message)
+        elif interaction.component.id == 'btnPrev':
+            self.queueIndex -= 1
+            message, buttons = await self.generateQueue()
+
+            if len(buttons) > 0:
+                await interaction.edit_origin(content=message, components=[buttons])
+            else:
+                await interaction.edit_origin(content=message)
+
+
+
 
     
     @tasks.loop(seconds=1)
