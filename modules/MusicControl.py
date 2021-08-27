@@ -88,6 +88,7 @@ class MusicControl(commands.Cog):
         self.queue = []
         self.queueIndex = 0
         self.stopLoading = False
+        self.context = None
         self.checkButtons.start()
 
     def loadTracks(self, tracks):
@@ -206,6 +207,9 @@ class MusicControl(commands.Cog):
                 await interaction.edit_origin(content=message, components=[buttons])
             else:
                 await interaction.edit_origin(content=message)
+        elif interaction.component.id == 'btnSkip':
+            await self.skip(self.context)
+            await interaction.edit_origin()
 
 
 
@@ -222,7 +226,8 @@ class MusicControl(commands.Cog):
                 async with context.typing():
                     player = await YTDLSource.from_url(url, loop=self.bot.loop, stream=True)
                     context.voice_client.play(player, after=lambda e: print(f'Player error: {e}') if e else None)
-                await context.send(f'Now playing: {player.title}')
+                self.context = context
+                await context.send(content=f'Now playing: {player.title}', components=[Button(style=ButtonStyle.blue, label="Skip", custom_id="btnSkip")])
 
 def setup(bot):
     bot.add_cog(MusicControl(bot))
