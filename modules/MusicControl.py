@@ -151,6 +151,47 @@ class MusicControl(commands.Cog):
     async def shuffle(self, context):
         random.shuffle(self.queue)
     
+    @commands.command(name='jump')
+    async def shuffle(self, context, id):
+        try:
+            id = int(id)
+        except:
+            context.send("Must supply a number")
+        del self.queue[:id-1]
+        context.voice_client.stop()
+    
+    @commands.command(name='remove')
+    async def shuffle(self, context, id):
+        try:
+            id = int(id)
+        except:
+            context.send("Must supply a number")
+        del self.queue[id-1]
+        await context.message.add_reaction('\N{THUMBS UP SIGN}')
+    
+    @commands.command(name='swap')
+    async def shuffle(self, context, id1, id2):
+        try:
+            id1 = int(id1)
+            id2 = int(id2)
+        except:
+            context.send("Must supply a number")
+        temp = self.queue[id1-1]
+        self.queue[id1-1] = self.queue[id2-1]
+        self.queue[id2-1] = temp
+        await context.message.add_reaction('\N{THUMBS UP SIGN}')
+    
+    @commands.command(name='move')
+    async def shuffle(self, context, id1, id2):
+        try:
+            id1 = int(id1)
+            id2 = int(id2)
+        except:
+            context.send("Must supply a number")
+        song = self.queue.pop(id1-1)
+        self.queue.insert(id2-1, song)
+        await context.message.add_reaction('\N{THUMBS UP SIGN}')
+
     async def generateQueue(self):
         index = self.queueIndex
         message = '```\n'
@@ -170,8 +211,6 @@ class MusicControl(commands.Cog):
             buttons.append(Button(style=ButtonStyle.blue, label="Next Page", custom_id="btnNext"))
         
         return message, buttons
-
-        
 
 
     @commands.command(name='queue', aliases=['q'])
