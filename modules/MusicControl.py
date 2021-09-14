@@ -48,8 +48,8 @@ with open('config.yaml') as f:
     client_secret = localConfig['spotify_secret']
 
 scope = "playlist-read-collaborative"
-sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id, client_secret= client_secret, redirect_uri='http://localhost/', scope=scope))
-
+#sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id, client_secret= client_secret, redirect_uri='http://localhost/', scope=scope))
+sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id, client_secret=client_secret, redirect_uri="http://localhost/", scope=scope, open_browser=False, ))
 
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=0.5):
