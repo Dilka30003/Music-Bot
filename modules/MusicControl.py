@@ -107,7 +107,10 @@ class MusicControl(commands.Cog):
     async def play(self, context, *, arg):
 
         controls = self.bot.get_cog('BasicVC')
-        await controls.join(context)
+        try:
+            await controls.join(context)
+        except:
+            return
 
         if 'open.spotify.com/playlist/' in arg:
             playlist = sp.playlist(arg)
@@ -137,11 +140,17 @@ class MusicControl(commands.Cog):
             if not self.task.is_running():
                 self.task.start(context)
 
-    @commands.command(name='stop', aliases=['clear'])
+    @commands.command(name='stop')
     async def stop(self, context):
         self.stopLoading = True
         context.voice_client.stop()
         self.queue = []
+    
+    @commands.command(name='clear')
+    async def stop(self, context):
+        self.stopLoading = True
+        self.queue = []
+        await context.message.add_reaction('\N{THUMBS UP SIGN}')
     
     @commands.command(name='skip', aliases=['n', 's'])
     async def skip(self, context):
@@ -223,6 +232,8 @@ class MusicControl(commands.Cog):
                 await context.send(content=message, components=[buttons])
             else:
                 await context.send(content=message)
+        else:
+            await context.message.add_reaction('\N{NO ENTRY SIGN}')
 
             
     
@@ -249,6 +260,7 @@ class MusicControl(commands.Cog):
         elif interaction.component.id == 'btnSkip':
             await self.skip(self.context)
             await interaction.edit_origin()
+
 
 
 
