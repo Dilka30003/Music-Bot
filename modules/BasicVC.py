@@ -37,6 +37,8 @@ class BasicVC(commands.Cog):
     
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
+        if not self.bot.user in before.channel.members:
+            return
         if before.channel is not None and not member.bot:
             notBot = list(filter(None, [(x if not x.bot else None) for x in before.channel.members]))
             if len(notBot) == 0:
