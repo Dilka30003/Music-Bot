@@ -159,6 +159,7 @@ class MusicControl(commands.Cog):
     @commands.command(name='shuffle')
     async def shuffle(self, context):
         random.shuffle(self.queue)
+        await context.message.add_reaction('\N{THUMBS UP SIGN}')
     
     @commands.command(name='jump')
     async def jump(self, context, id):
