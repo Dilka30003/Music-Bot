@@ -161,7 +161,7 @@ class MusicControl(commands.Cog):
         random.shuffle(self.queue)
     
     @commands.command(name='jump')
-    async def shuffle(self, context, id):
+    async def jump(self, context, id):
         try:
             id = int(id)
         except:
@@ -170,7 +170,7 @@ class MusicControl(commands.Cog):
         context.voice_client.stop()
     
     @commands.command(name='remove')
-    async def shuffle(self, context, id):
+    async def remove(self, context, id):
         try:
             id = int(id)
         except:
@@ -179,7 +179,7 @@ class MusicControl(commands.Cog):
         await context.message.add_reaction('\N{THUMBS UP SIGN}')
     
     @commands.command(name='swap')
-    async def shuffle(self, context, id1, id2):
+    async def swap(self, context, id1, id2):
         try:
             id1 = int(id1)
             id2 = int(id2)
@@ -191,7 +191,7 @@ class MusicControl(commands.Cog):
         await context.message.add_reaction('\N{THUMBS UP SIGN}')
     
     @commands.command(name='move')
-    async def shuffle(self, context, id1, id2):
+    async def move(self, context, id1, id2):
         try:
             id1 = int(id1)
             id2 = int(id2)
