@@ -16,6 +16,7 @@ class BasicVC(commands.Cog):
         self.bot = bot
         self.context = None
 
+    # Join a coice channel
     @commands.command(name='join', brief='Join a vc', description="Join a vc")
     async def join(self, context):
         self.context = context
@@ -28,6 +29,7 @@ class BasicVC(commands.Cog):
             await context.message.channel.send('You must be in a voice channel to use this command')
             raise RuntimeError("User not in voice channel")
     
+    # Leave a voice channel
     @commands.command(name='leave', brief='Leave a vc', description="Leave a vc")
     async def leave(self, context):
         controls = self.bot.get_cog('MusicControl')
@@ -35,6 +37,7 @@ class BasicVC(commands.Cog):
 
         await context.voice_client.disconnect()
     
+    # If everyone leaves the voice channel, make the bot leave
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
         if not self.bot.user in before.channel.members:

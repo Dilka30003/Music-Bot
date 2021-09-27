@@ -72,7 +72,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         filename = data['url'] if stream else ytdl.prepare_filename(data)
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
 
-
+# Class for storing song data
 class Song():
     def __init__(self, results):
         self.url = results['link']
@@ -91,6 +91,7 @@ class MusicControl(commands.Cog):
         self.context = None
         self.checkButtons.start()
 
+    # Function to load tracks from a list of tracks
     def loadTracks(self, tracks):
         for rawSong in tracks:
             name = rawSong['track']['name']
@@ -102,7 +103,6 @@ class MusicControl(commands.Cog):
                 break
             self.queue.append(song)
             
-
     @commands.command(name='play', aliases=['p'])
     async def play(self, context, *, arg):
 
@@ -112,6 +112,7 @@ class MusicControl(commands.Cog):
         except:
             return
 
+        # Check if the message contains a link to a spotify playlist
         if 'open.spotify.com/playlist/' in arg:
             playlist = sp.playlist(arg)
 
@@ -120,14 +121,16 @@ class MusicControl(commands.Cog):
             song = Song(results)
             self.queue.append(song)
 
+            # If a playlist is specified, start loading in a seperate thread to stop the bot from hanging
             self.loadThread = threading.Thread(target=self.loadTracks, args=([playlist['tracks']['items'][1:]]), daemon=True).start()
 
+            # If the loading task isn't running, start it
             if not self.task.is_running():
                 await self.task.start(context)
             
             playlistLength = len(playlist['tracks']['items'])
             await context.send(f'Added {playlistLength} songs to queue')
-
+        # If only a single song is specified, find it and add it to the queue
         else:
             results = VideosSearch(arg, limit = 1).result()['result'][0]
             song = Song(results)
@@ -142,7 +145,7 @@ class MusicControl(commands.Cog):
 
     @commands.command(name='stop')
     async def stop(self, context):
-        self.stopLoading = True
+        self.stopLoading = True         # Stop loading songs from the loading thread
         context.voice_client.stop()
         self.queue = []
     
@@ -152,6 +155,7 @@ class MusicControl(commands.Cog):
         self.queue = []
         await context.message.add_reaction('\N{THUMBS UP SIGN}')
     
+    # To skip, stop playing the current song and the play task will start the next song automatically
     @commands.command(name='skip', aliases=['n', 's'])
     async def skip(self, context):
         context.voice_client.stop()
@@ -161,6 +165,7 @@ class MusicControl(commands.Cog):
         random.shuffle(self.queue)
         await context.message.add_reaction('\N{THUMBS UP SIGN}')
     
+    # To jump, delete all the songs in the queue before the specified index and skip the current song
     @commands.command(name='jump')
     async def jump(self, context, id):
         try:
@@ -202,6 +207,7 @@ class MusicControl(commands.Cog):
         self.queue.insert(id2-1, song)
         await context.message.add_reaction('\N{THUMBS UP SIGN}')
 
+    # Generates a human readable queue page based on the current page number
     async def generateQueue(self):
         index = self.queueIndex
         message = '```\n'
@@ -222,7 +228,7 @@ class MusicControl(commands.Cog):
         
         return message, buttons
 
-
+    # Output the current queue
     @commands.command(name='queue', aliases=['q'])
     async def queue(self, context):
         if len(self.queue) > 0:
@@ -237,7 +243,7 @@ class MusicControl(commands.Cog):
             await context.message.add_reaction('\N{NO ENTRY SIGN}')
 
             
-    
+    # handle buttons attached to messages
     @tasks.loop(seconds=0.5)
     async def checkButtons(self):
         interaction = await self.bot.wait_for("button_click")
@@ -262,13 +268,10 @@ class MusicControl(commands.Cog):
             await self.skip(self.context)
             await interaction.edit_origin()
 
-
-
-
-
-    
+    # Loop that handles playing songs from the queue
     @tasks.loop(seconds=1)
     async def queueHandler(self, context):
+        # If the bot isnt currently playing music, dequeue a song and start playing it
         if not context.voice_client.is_playing():
             if len(self.queue) < 1:
                 self.task.cancel()
